@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Soundboard การแสดงงานวิทย์</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#111827; --border:#223047; --text:#e5e7eb; --muted:#94a3b8;
+      --btn:#0ea5e9; --btn2:#22c55e; --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      color:var(--text);
+      font-family:system-ui,Segoe UI,Roboto,Arial,"Noto Sans",sans-serif;
+      overflow-x:hidden;
+      min-height:100vh;
+    }
+    .container{max-width:1200px;margin:0 auto;padding:16px}
+    h1{
+      font-size:clamp(22px,4vw,30px);
+      margin:0 0 20px;
+      font-weight:800;
+      text-align:center;
+      color:white;
+      text-shadow:0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0 20px;justify-content:center}
+    .group{
+      display:flex;gap:8px;align-items:center;
+      background:rgba(255,255,255,0.15);
+      backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.2);
+      padding:12px;border-radius:16px;
+      box-shadow:0 4px 6px -1px rgba(0,0,0,.1);
+    }
+    .btn{
+      appearance:none;border:none;
+      background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(255,255,255,.1));
+      color:white;padding:10px 14px;border-radius:12px;
+      border:1px solid rgba(255,255,255,.3);
+      cursor:pointer;transition:all .2s ease;
+      box-shadow:0 2px 4px rgba(0,0,0,.1);
+      font-weight:600;
+      text-shadow:0 1px 2px rgba(0,0,0,0.3);
+    }
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+    .btn:active{transform:translateY(0)}
+    .btn.primary{background:linear-gradient(145deg,#0ea5e9,#0284c7);border-color:rgba(255,255,255,.4)}
+    .btn.success{background:linear-gradient(145deg,#22c55e,#16a34a);border-color:rgba(255,255,255,.4)}
+    .btn.ghost{background:rgba(255,255,255,.1);backdrop-filter:blur(5px)}
+    .btn.danger{background:linear-gradient(145deg,#ef4444,#dc2626);border-color:rgba(255,255,255,.4)}
+
+    input[type="file"]{display:none}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+    @media (max-width:640px){ .grid{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width:480px){ .grid{grid-template-columns:1fr} }
+
+    .card{
+      background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.05));
+      border:1px solid rgba(255,255,255,.2);
+      border-radius:20px;padding:14px;
+      display:flex;flex-direction:column;gap:12px;
+      min-height:160px;position:relative;
+      backdrop-filter:blur(10px);
+      transition:all .3s ease;
+      box-shadow:0 4px 6px -1px rgba(0,0,0,.1);
+    }
+    .card:hover{
+      transform:translateY(-4px);
+      box-shadow:0 10px 25px -3px rgba(0,0,0,.2);
+    }
+    .card.playing{
+      animation:pulse 1s ease-in-out infinite alternate;
+      border-color:rgba(34,197,94,.8);
+      box-shadow:0 0 20px rgba(34,197,94,.3);
+    }
+    @keyframes pulse{
+      from{box-shadow:0 0 20px rgba(34,197,94,.3)}
+      to{box-shadow:0 0 30px rgba(34,197,94,.5)}
+    }
+
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .grow{flex:1}
+    .name{
+      width:100%;background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.3);
+      border-radius:10px;padding:10px;color:white;
+      transition:border-color .2s;
+      font-weight:500;
+    }
+    .name:focus{outline:none;border-color:#0ea5e9;background:rgba(255,255,255,.15)}
+    .name::placeholder{color:rgba(255,255,255,.6)}
+    
+    .pad{
+      display:block;width:100%;text-align:center;
+      font-weight:800;font-size:16px;
+      border-radius:16px;padding:16px 12px;
+      border:2px solid rgba(255,255,255,.3);
+      cursor:pointer;position:relative;
+      transition:all .2s ease;
+      overflow:hidden;
+      color:white;
+      text-shadow:0 2px 4px rgba(0,0,0,0.3);
+    }
+    .pad:before{
+      content:'';position:absolute;
+      top:-50%;left:-50%;width:200%;height:200%;
+      background:rgba(255,255,255,.2);
+      transform:rotate(45deg) translate(-100%,-100%);
+      transition:transform .5s ease;
+    }
+    .pad:active:before{transform:rotate(45deg) translate(0,0)}
+    
+    .controls{display:flex;gap:6px;margin-top:auto}
+    .controls .btn{padding:6px 10px;font-size:12px}
+    
+    .tag{
+      position:absolute;top:8px;right:8px;
+      font-size:10px;opacity:.8;
+      background:rgba(0,0,0,.6);
+      color:rgba(255,255,255,.9);
+      padding:4px 8px;border-radius:8px;
+      backdrop-filter:blur(5px);
+    }
+    
+    .hint{
+      margin-top:16px;font-size:13px;opacity:.8;
+      padding:12px;background:rgba(255,255,255,.1);
+      border-radius:10px;text-align:center;
+      backdrop-filter:blur(10px);
+      color:white;
+    }
+    
+    .volume-control{
+      display:flex;align-items:center;gap:8px;
+    }
+    .volume-slider{
+      width:100px;height:4px;
+      background:rgba(255,255,255,.3);
+      border-radius:4px;outline:none;
+      -webkit-appearance:none;cursor:pointer;
+    }
+    .volume-slider::-webkit-slider-thumb{
+      appearance:none;width:16px;height:16px;
+      background:white;border-radius:50%;
+      cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,.3);
+    }
+    .volume-slider::-moz-range-thumb{
+      width:16px;height:16px;
+      background:white;border-radius:50%;
+      cursor:pointer;border:none;
+      box-shadow:0 2px 4px rgba(0,0,0,.3);
+    }
+
+    .science-emoji{
+      position:absolute;
+      pointer-events:none;
+      font-size:20px;
+      animation:float 3s ease-in-out infinite;
+      opacity:0.3;
+    }
+    @keyframes float{
+      0%,100%{transform:translateY(0px) rotate(0deg)}
+      50%{transform:translateY(-10px) rotate(5deg)}
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating science emojis -->
+  <div class="science-emoji" style="top:10%;left:5%;animation-delay:0s">🧪</div>
+  <div class="science-emoji" style="top:20%;right:10%;animation-delay:1s">⚗️</div>
+  <div class="science-emoji" style="top:60%;left:8%;animation-delay:2s">🔬</div>
+  <div class="science-emoji" style="top:80%;right:5%;animation-delay:1.5s">🧬</div>
+  <div class="science-emoji" style="top:40%;right:15%;animation-delay:0.5s">⚡</div>
+
+  <div class="container">
+    <h1>🧪 Soundboard การแสดงงานวิทย์ 🔬</h1>
+
+    <div class="toolbar">
+      <div class="group">
+        <label class="btn primary" for="fileInput">
+          ➕ เพิ่มไฟล์เสียง
+        </label>
+        <input id="fileInput" type="file" accept="audio/*" multiple />
+        <button id="addUrlBtn" class="btn success">🔗 จาก URL</button>
+      </div>
+      
+      <div class="group">
+        <div class="volume-control">
+          <span style="color:white;">🔊</span>
+          <input type="range" id="masterVolume" class="volume-slider" min="0" max="1" step="0.1" value="0.7">
+          <span id="volumeLabel" style="color:white;font-weight:600;">70%</span>
+        </div>
+        <button id="stopAllBtn" class="btn ghost">⏹️ หยุดทั้งหมด</button>
+      </div>
+      
+      <div class="group">
+        <button id="exportBtn" class="btn">⬇️ สำรองข้อมูล</button>
+        <label class="btn" for="importInput">⬆️ นำเข้าข้อมูล</label>
+        <input id="importInput" type="file" accept="application/json" />
+      </div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    
+    <div class="hint">
+      🎵 <strong>วิธีใช้:</strong> ลาก & วางไฟล์เสียงได้ทุกที่ | คลิกปุ่มเพื่อเล่น/หยุด | ปรับแต่งสีและการเล่นซ้ำได้ | เหมาะสำหรับการนำเสนองานวิทยาศาสตร์
+    </div>
+  </div>
+
+<script>
+(function(){
+  const DB='soundboard-science'; const STORE='sounds';
+  let db;
+  const state={ items:[], playing:new Map(), masterVolume:0.7 };
+
+  // ---------- IndexedDB helpers ----------
+  const openDB=()=>new Promise((res,rej)=>{ 
+    const r=indexedDB.open(DB,1); 
+    r.onupgradeneeded=()=>{
+      const d=r.result; 
+      if(!d.objectStoreNames.contains(STORE)){ 
+        const s=d.createObjectStore(STORE,{keyPath:'id',autoIncrement:true}); 
+        s.createIndex('name','name',{unique:false}); 
+      }
+    }; 
+    r.onsuccess=()=>{db=r.result; res(db)}; 
+    r.onerror=()=>rej(r.error);
+  });
+  
+  const store=(mode='readonly')=>db.transaction(STORE,mode).objectStore(STORE);
+  const getAll=()=>new Promise((res,rej)=>{ const r=store().getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const add=rec=>new Promise((res,rej)=>{ const r=store('readwrite').add(rec); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const put=rec=>new Promise((res,rej)=>{ const r=store('readwrite').put(rec); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const del=id=>new Promise((res,rej)=>{ const r=store('readwrite').delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
+
+  // ---------- Utils ----------
+  const el=s=>document.querySelector(s);
+  const all=s=>document.querySelectorAll(s);
+  const grid=el('#grid');
+  const colorDefault=(i)=>['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#ef4444','#14b8a6','#f472b6','#60a5fa','#fb7185','#34d399'][i%10];
+  const blobToDataURL=(blob)=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); });
+  const dataURLToBlob=async(dataURL)=>{ const [meta,b64]=dataURL.split(','); const mime=meta.match(/data:(.*);base64/)[1]; const bin=atob(b64); const bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return new Blob([bytes],{type:mime}); };
+
+  // ---------- Audio control ----------
+  const createAudio=(rec)=>{ 
+    const src=URL.createObjectURL(rec.blob); 
+    const a=new Audio(src); 
+    a.loop=!!rec.loop; 
+    a.volume=state.masterVolume;
+    a.onended=()=>{ 
+      if(!a.loop) {
+        state.playing.delete(rec.id); 
+        updatePlayingButtons();
+      }
+    }; 
+    return a; 
+  };
+  
+  const playToggle=async(id)=>{ 
+    const rec=state.items.find(x=>x.id===id); 
+    if(!rec) return; 
+    const cur=state.playing.get(id); 
+    if(cur){ 
+      cur.pause(); 
+      cur.currentTime=0; 
+      state.playing.delete(id); 
+      updatePlayingButtons();
+      return; 
+    } 
+    const a=createAudio(rec); 
+    state.playing.set(id,a); 
+    try{ 
+      await a.play();
+      updatePlayingButtons();
+    }catch(e){ 
+      alert('เล่นไม่ได้: '+e.message); 
+      state.playing.delete(id); 
+    }
+  };
+  
+  const stopAll=()=>{ 
+    for(const a of state.playing.values()) {
+      a.pause();
+      a.currentTime=0;
+    }
+    state.playing.clear(); 
+    updatePlayingButtons();
+  };
+
+  const updateMasterVolume=(vol)=>{
+    state.masterVolume=vol;
+    state.playing.forEach(audio=>{
+      audio.volume=vol;
+    });
+  };
+
+  // ---------- UI Updates ----------
+  const updatePlayingButtons=()=>{
+    all('.card').forEach(card=>{
+      const id=parseInt(card.dataset.id);
+      const isPlaying=state.playing.has(id);
+      const pad=card.querySelector('.pad');
+      const btn=pad.querySelector('.play-btn');
+      if(btn){
+        btn.textContent=isPlaying?'⏸️ หยุด':'▶️ เล่น';
+      }
+      card.classList.toggle('playing',isPlaying);
+    });
+  };
+
+  // ---------- Render ----------
+  const render=()=>{
+    grid.innerHTML='';
+    
+    state.items.forEach((rec,idx)=>{
+      const card=document.createElement('div'); 
+      card.className='card';
+      card.dataset.id=rec.id;
+
+      const tag=document.createElement('div'); 
+      tag.className='tag'; 
+      tag.textContent=rec.source?`${rec.source.length>15?rec.source.substring(0,15)+'...':rec.source}`:'ไฟล์ท้องถิ่น';
+
+      const nameInput=document.createElement('input'); 
+      nameInput.className='name'; 
+      nameInput.value=rec.name||'ไม่มีชื่อ'; 
+      nameInput.placeholder='ตั้งชื่อปุ่มเสียง';
+      nameInput.addEventListener('change',async()=>{ 
+        rec.name=nameInput.value; 
+        await put(rec); 
+      });
+
+      const pad=document.createElement('button'); 
+      pad.className='pad'; 
+      pad.style.background=`linear-gradient(145deg, ${rec.color||colorDefault(idx)}, rgba(0,0,0,.2))`; 
+      const playBtn=document.createElement('span');
+      playBtn.className='play-btn';
+      playBtn.textContent=state.playing.has(rec.id)?'⏸️ หยุด':'▶️ เล่น';
+      pad.appendChild(playBtn);
+      
+      pad.addEventListener('click', async()=>{ 
+        await playToggle(rec.id);
+      });
+
+      const controls=document.createElement('div'); 
+      controls.className='controls';
+      
+      const loopBtn=document.createElement('button');
+      loopBtn.className=`btn ${rec.loop?'success':'ghost'}`;
+      loopBtn.textContent=rec.loop?'🔁 ลูป':'🔁';
+      loopBtn.title='เปิด/ปิดการเล่นซ้ำ';
+      loopBtn.addEventListener('click',async()=>{ 
+        rec.loop=!rec.loop; 
+        await put(rec); 
+        render();
+        const a=state.playing.get(rec.id); 
+        if(a) a.loop=rec.loop; 
+      });
+
+      const colorBtn=document.createElement('input'); 
+      colorBtn.type='color'; 
+      colorBtn.value=rec.color||colorDefault(idx);
+      colorBtn.title='เปลี่ยนสีปุ่ม';
+      colorBtn.style.width='32px';
+      colorBtn.style.height='32px';
+      colorBtn.style.padding='0';
+      colorBtn.style.border='2px solid rgba(255,255,255,.3)';
+      colorBtn.style.borderRadius='8px';
+      colorBtn.style.cursor='pointer';
+      colorBtn.addEventListener('input',async()=>{ 
+        rec.color=colorBtn.value; 
+        await put(rec); 
+        pad.style.background=`linear-gradient(145deg, ${rec.color}, rgba(0,0,0,.2))`; 
+      });
+
+      const delBtn=document.createElement('button'); 
+      delBtn.className='btn danger'; 
+      delBtn.textContent='🗑️'; 
+      delBtn.title='ลบเสียงนี้';
+      delBtn.addEventListener('click', async()=>{ 
+        if(confirm(`ลบเสียง "${rec.name}" หรือไม่?`)){ 
+          await del(rec.id); 
+          const a=state.playing.get(rec.id);
+          if(a) {
+            a.pause();
+            state.playing.delete(rec.id);
+          }
+          await load(); 
+        }
+      });
+
+      controls.append(loopBtn, colorBtn, delBtn);
+      card.append(tag, nameInput, pad, controls);
+      grid.appendChild(card);
+    });
+    
+    updatePlayingButtons();
+  };
+
+  // ---------- Drag & Drop ----------
+  const setupDragDrop=()=>{
+    const body=document.body;
+    let dragCounter=0;
+    
+    body.addEventListener('dragenter',(e)=>{
+      e.preventDefault();
+      dragCounter++;
+      body.style.background='linear-gradient(135deg, rgba(34,197,94,0.3), rgba(34,197,94,0.1))';
+    });
+    
+    body.addEventListener('dragleave',(e)=>{
+      e.preventDefault();
+      dragCounter--;
+      if(dragCounter<=0){
+        body.style.background='';
+      }
+    });
+    
+    body.addEventListener('dragover',(e)=>{
+      e.preventDefault();
+    });
+    
+    body.addEventListener('drop',async(e)=>{
+      e.preventDefault();
+      dragCounter=0;
+      body.style.background='';
+      
+      const files=Array.from(e.dataTransfer.files);
+      const audioFiles=files.filter(f=>f.type.startsWith('audio/'));
+      
+      if(audioFiles.length>0){
+        for(const f of audioFiles){
+          await add({ 
+            name:f.name.replace(/\.[^/.]+$/, ''), 
+            loop:false, 
+            color:'', 
+            source:'ลาก & วาง', 
+            blob:f 
+          });
+        }
+        await load();
+      }else if(files.length>0){
+        alert('กรุณาเลือกไฟล์เสียงเท่านั้น');
+      }
+    });
+  };
+
+  // ---------- Import / Export ----------
+  const exportAll=async()=>{
+    const items=await getAll();
+    const enriched=await Promise.all(items.map(async r=>({
+      id:r.id,name:r.name,loop:!!r.loop,color:r.color||'',source:r.source||'',
+      dataURL: await blobToDataURL(r.blob)
+    })));
+    const payload={
+      version:3, 
+      exportedAt:new Date().toISOString(), 
+      items:enriched,
+      appName:'Soundboard การแสดงงานวิทย์'
+    };
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob); 
+    const a=document.createElement('a'); 
+    a.href=url; 
+    a.download=`soundboard-science-${new Date().toISOString().split('T')[0]}.json`; 
+    a.click(); 
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  };
+
+  const importAll=async(file)=>{
+    try{ 
+      const text=await file.text(); 
+      const data=JSON.parse(text); 
+      if(!data.items) throw new Error('ไฟล์ไม่ถูกต้อง');
+      
+      let imported=0;
+      for(const it of data.items){ 
+        try{
+          const blob=await dataURLToBlob(it.dataURL); 
+          await add({ 
+            name:it.name||'นำเข้า', 
+            loop:!!it.loop, 
+            color:it.color||'', 
+            source:it.source||'นำเข้า', 
+            blob 
+          }); 
+          imported++;
+        }catch(e){
+          console.warn('Skip invalid item:', e);
+        }
+      }
+      await load(); 
+      alert(`✅ นำเข้าสำเร็จ ${imported} รายการ`);
+    }catch(e){ 
+      alert('❌ นำเข้าไม่สำเร็จ: '+e.message); 
+    }
+  };
+
+  // ---------- Load & Initialize ----------
+  const load=async()=>{ 
+    try{
+      await openDB(); 
+      state.items=await getAll(); 
+      render();
+    }catch(e){
+      console.error('Load failed:',e);
+      alert('โหลดข้อมูลไม่สำเร็จ: '+e.message);
+    }
+  };
+
+  // ---------- Event Listeners ----------
+  document.addEventListener('DOMContentLoaded',()=>{
+    // File input
+    el('#fileInput').addEventListener('change', async(e)=>{
+      const files=Array.from(e.target.files||[]); 
+      if(!files.length) return;
+      for(const f of files){ 
+        if(!f.type.startsWith('audio/')){
+          alert(`ไฟล์ "${f.name}" ไม่ใช่ไฟล์เสียง`);
+          continue;
+        }
+        await add({ 
+          name:f.name.replace(/\.[^/.]+$/, ''), 
+          loop:false, 
+          color:'', 
+          source:'ไฟล์ท้องถิ่น', 
+          blob:f 
+        }); 
+      }
+      e.target.value=''; 
+      await load();
+    });
+
+    // URL input
+    el('#addUrlBtn').addEventListener('click', async()=>{
+      const url=prompt('วางลิงก์ไฟล์เสียง (.mp3/.wav/.m4a/.ogg)'); 
+      if(!url) return;
+      const name=prompt('ตั้งชื่อปุ่มเสียง',url.split('/').pop().replace(/\.[^/.]+$/, '')||'จากลิงก์');
+      if(!name) return;
+      
+      try{ 
+        const loadingMsg='⏳ กำลังดาวน์โหลด...';
+        const originalText=el('#addUrlBtn').textContent;
+        el('#addUrlBtn').textContent=loadingMsg;
+        el('#addUrlBtn').disabled=true;
+        
+        const res=await fetch(url,{mode:'cors'}); 
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        
+        const blob=await res.blob(); 
+        if(!blob.type.startsWith('audio/')) throw new Error('ไม่ใช่ไฟล์เสียง');
+        
+        await add({ 
+          name, 
+          loop:false, 
+          color:'', 
+          source:url, 
+          blob 
+        }); 
+        await load(); 
+        alert('✅ ดาวน์โหลดและบันทึกสำเร็จ'); 
+      }catch(e){ 
+        alert('❌ ดาวน์โหลดไม่สำเร็จ: '+e.message); 
+      }finally{
+        el('#addUrlBtn').textContent=originalText;
+        el('#addUrlBtn').disabled=false;
+      }
+    });
+
+    // Volume control
+    el('#masterVolume').addEventListener('input',(e)=>{
+      const vol=parseFloat(e.target.value);
+      updateMasterVolume(vol);
+      el('#volumeLabel').textContent=Math.round(vol*100)+'%';
+    });
+
+    // Control buttons
+    el('#stopAllBtn').addEventListener('click', stopAll);
+    el('#exportBtn').addEventListener('click', exportAll);
+    el('#importInput').addEventListener('change', (e)=>{ 
+      const f=e.target.files?.[0]; 
+      if(f) importAll(f); 
+      e.target.value=''; 
+    });
+
+    // Initialize features
+    setupDragDrop();
+    
+    // Load data
+    load();
+
+    // Keyboard shortcuts (simple)
+    document.addEventListener('keydown',(e)=>{
+      if(e.target.tagName==='INPUT') return;
+      if(e.code==='Space'){
+        e.preventDefault();
+        stopAll();
+      }
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
